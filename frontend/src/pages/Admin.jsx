@@ -14,26 +14,24 @@ const Admin = () => {
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
   const [form, setForm] = useState({
     name: '', description: '', price: '', category: '', image: '', stock: ''
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      navigate('/');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
     fetchAll();
   }, []);
 
   const fetchAll = async () => {
     try {
-      const [productsRes, ordersRes] = await Promise.all([
-        api.get('/products'),
-        api.get('/orders'),
-      ]);
+      const productsRes = await api.get('/products');
       setProducts(productsRes.data);
-      setOrders(ordersRes.data);
+      if (user?.role === 'admin') {
+        const ordersRes = await api.get('/orders');
+        setOrders(ordersRes.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -44,6 +42,11 @@ const Admin = () => {
   const showSuccess = (msg) => {
     setSuccess(msg);
     setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const showError = (msg) => {
+    setError(msg);
+    setTimeout(() => setError(''), 4000);
   };
 
   const handleSubmit = async (e) => {
@@ -65,11 +68,19 @@ const Admin = () => {
       setEditProduct(null);
       fetchAll();
     } catch (err) {
-      console.error(err);
+      if (err.response?.status === 429) {
+        showError(err.response.data.message);
+      } else {
+        showError('Something went wrong, try again');
+      }
     }
   };
 
   const handleEdit = (product) => {
+    if (product.seller?._id !== user._id && user.role !== 'admin') {
+      showError('You can only edit your own products!');
+      return;
+    }
     setEditProduct(product);
     setForm({
       name: product.name,
@@ -82,9 +93,13 @@ const Admin = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (product) => {
+    if (product.seller?._id !== user._id && user.role !== 'admin') {
+      showError('You can only delete your own products!');
+      return;
+    }
     if (window.confirm('Delete this product?')) {
-      await api.delete(`/products/${id}`);
+      await api.delete(`/products/${product._id}`);
       showSuccess('Product deleted!');
       fetchAll();
     }
@@ -106,6 +121,7 @@ const Admin = () => {
     </div>
   );
 
+  const myProducts = products.filter(p => p.seller?._id === user._id || p.seller === user._id);
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalPrice, 0);
 
   return (
@@ -117,8 +133,10 @@ const Admin = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>⚙️ Admin Dashboard</h1>
-          <p style={{ color: '#999' }}>Welcome back, {user.name}!</p>
+          <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>
+            {user.role === 'admin' ? '⚙️ Admin Dashboard' : '🛍️ Seller Dashboard'}
+          </h1>
+          <p style={{ color: '#999' }}>Welcome, {user.name}! {user.role !== 'admin' && <span style={{ color: '#e96c4c' }}>You can add 1 product per day.</span>}</p>
         </div>
         {activeTab === 'products' && (
           <motion.button
@@ -132,7 +150,7 @@ const Admin = () => {
         )}
       </div>
 
-      {/* Success message */}
+      {/* Success / Error messages */}
       <AnimatePresence>
         {success && (
           <motion.div
@@ -144,15 +162,28 @@ const Admin = () => {
             ✓ {success}
           </motion.div>
         )}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{ background: '#ffe0e0', color: '#c0392b', padding: '0.75rem 1.25rem', borderRadius: '10px', marginBottom: '1.5rem', fontWeight: 'bold' }}
+          >
+            ⚠️ {error}
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-        {[
+      <div style={{ display: 'grid', gridTemplateColumns: user.role === 'admin' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+        {user.role === 'admin' ? [
           { label: 'Total Products', value: products.length, icon: '📦', color: '#e96c4c' },
           { label: 'Total Orders', value: orders.length, icon: '🛒', color: '#3498db' },
           { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: '💰', color: '#27ae60' },
           { label: 'Delivered', value: orders.filter(o => o.isDelivered).length, icon: '🚚', color: '#9b59b6' },
+        ] : [
+          { label: 'My Products', value: myProducts.length, icon: '📦', color: '#e96c4c' },
+          { label: 'Daily Limit', value: `${myProducts.filter(p => { const today = new Date(); today.setHours(0,0,0,0); return new Date(p.createdAt) >= today; }).length}/1`, icon: '⏰', color: '#f0a500' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -168,29 +199,26 @@ const Admin = () => {
         ))}
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — only admin sees orders tab */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {['products', 'orders'].map(tab => (
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setActiveTab('products')}
+          style={{ padding: '0.6rem 1.5rem', background: activeTab === 'products' ? 'linear-gradient(135deg, #e96c4c, #f0a500)' : 'white', color: activeTab === 'products' ? 'white' : '#666', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+        >
+          📦 {user.role === 'admin' ? `All Products (${products.length})` : `My Products (${myProducts.length})`}
+        </motion.button>
+        {user.role === 'admin' && (
           <motion.button
-            key={tab}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.6rem 1.5rem',
-              background: activeTab === tab ? 'linear-gradient(135deg, #e96c4c, #f0a500)' : 'white',
-              color: activeTab === tab ? 'white' : '#666',
-              border: 'none',
-              borderRadius: '10px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              textTransform: 'capitalize',
-            }}
+            onClick={() => setActiveTab('orders')}
+            style={{ padding: '0.6rem 1.5rem', background: activeTab === 'orders' ? 'linear-gradient(135deg, #e96c4c, #f0a500)' : 'white', color: activeTab === 'orders' ? 'white' : '#666', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
-            {tab === 'products' ? `📦 Products (${products.length})` : `🛒 Orders (${orders.length})`}
+            🛒 Orders ({orders.length})
           </motion.button>
-        ))}
+        )}
       </div>
 
       {/* Add/Edit Product Form */}
@@ -247,7 +275,7 @@ const Admin = () => {
       {activeTab === 'products' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {products.map((product, i) => (
+            {(user.role === 'admin' ? products : myProducts).map((product, i) => (
               <motion.div
                 key={product._id}
                 initial={{ opacity: 0, y: 20 }}
@@ -279,7 +307,7 @@ const Admin = () => {
                     <motion.button
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => handleDelete(product._id)}
+                      onClick={() => handleDelete(product)}
                       style={{ flex: 1, padding: '0.5rem', background: '#ffe0e0', color: '#e96c4c', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
                     >
                       🗑️ Delete
@@ -288,12 +316,18 @@ const Admin = () => {
                 </div>
               </motion.div>
             ))}
+            {(user.role !== 'admin' && myProducts.length === 0) && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#999' }}>
+                <p style={{ fontSize: '3rem' }}>📦</p>
+                <p>You haven't added any products yet!</p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
 
-      {/* Orders Tab */}
-      {activeTab === 'orders' && (
+      {/* Orders Tab — admin only */}
+      {activeTab === 'orders' && user.role === 'admin' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {orders.map((order, i) => (
             <motion.div

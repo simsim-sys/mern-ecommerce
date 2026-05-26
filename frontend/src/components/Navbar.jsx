@@ -69,16 +69,14 @@ const Navbar = () => {
 
       {/* Links */}
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-        {[{ label: 'Home', path: '/' }].map(link => (
-          <motion.div key={link.path} whileHover={{ y: -2 }}>
-            <Link to={link.path} style={{ color: '#ccc', fontWeight: '500', transition: 'color 0.2s' }}
-              onMouseEnter={e => e.target.style.color = 'white'}
-              onMouseLeave={e => e.target.style.color = '#ccc'}
-            >
-              {link.label}
-            </Link>
-          </motion.div>
-        ))}
+        <motion.div whileHover={{ y: -2 }}>
+          <Link to="/" style={{ color: '#ccc', fontWeight: '500', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.target.style.color = 'white'}
+            onMouseLeave={e => e.target.style.color = '#ccc'}
+          >
+            Home
+          </Link>
+        </motion.div>
 
         {/* Cart */}
         <motion.div whileHover={{ y: -2 }}>
@@ -86,7 +84,7 @@ const Navbar = () => {
             onMouseEnter={e => e.target.style.color = 'white'}
             onMouseLeave={e => e.target.style.color = '#ccc'}
           >
-             Cart
+            🛍️ Cart
             {totalItems > 0 && (
               <motion.span
                 key={totalItems}
@@ -102,20 +100,33 @@ const Navbar = () => {
 
         {user ? (
           <>
-            {user.role === 'admin' && (
+            {/* Admin or Sell link */}
+            {user.role === 'admin' ? (
               <motion.div whileHover={{ y: -2 }}>
                 <Link to="/admin" style={{ color: '#f0a500', fontWeight: 'bold' }}>⚙️ Admin</Link>
               </motion.div>
+            ) : (
+              <motion.div whileHover={{ y: -2 }}>
+                <Link to="/admin" style={{ color: '#2ecc71', fontWeight: 'bold' }}
+                  onMouseEnter={e => e.target.style.color = 'white'}
+                  onMouseLeave={e => e.target.style.color = '#2ecc71'}
+                >
+                  🛍️ Sell
+                </Link>
+              </motion.div>
             )}
+
             <motion.div whileHover={{ y: -2 }}>
               <Link to="/orders" style={{ color: '#ccc' }}
                 onMouseEnter={e => e.target.style.color = 'white'}
                 onMouseLeave={e => e.target.style.color = '#ccc'}
               >
-                 Orders
+                📦 Orders
               </Link>
             </motion.div>
+
             <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Hi, {user.name} 👋</span>
+
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
