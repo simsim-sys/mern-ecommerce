@@ -8,7 +8,7 @@ connectDB();
 
 const app = express();
 
-app.use(cors({
+const corsOptions = {
   origin: [
     'https://mern-ecommerce-six-eta.vercel.app',
     'http://localhost:5173'
@@ -16,10 +16,9 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
 
-app.options('*', cors());
-
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get('/', (req, res) => {
