@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://calm-reflection.up.railway.app/api',
+  baseURL: 'https://calm-reflection-production-75c6.up.railway.app/api',
 });
 
 api.interceptors.request.use((config) => {
