@@ -166,7 +166,7 @@ const Navbar = () => {
             </motion.div>
 
             <span style={{ color: "#aaa", fontSize: "0.9rem" }}>
-              Hi, {user.name} 👋
+              Hi, {user.name} 
             </span>
 
             <motion.button
