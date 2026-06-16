@@ -49,7 +49,7 @@ const Home = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
           type="text"
-          placeholder="🔍 Search products..."
+          placeholder=" Search products..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ width: '100%', maxWidth: '500px', padding: '1rem 1.5rem', borderRadius: '30px', border: 'none', fontSize: '1rem', outline: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
@@ -72,7 +72,7 @@ const Home = () => {
           </div>
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '4rem', color: '#999' }}>
-            <p style={{ fontSize: '3rem' }}>🔍</p>
+            <p style={{ fontSize: '3rem' }}></p>
             <p style={{ fontSize: '1.2rem' }}>No products found</p>
           </motion.div>
         ) : (

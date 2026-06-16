@@ -53,7 +53,7 @@ const Navbar = () => {
             transition={{ duration: 0.5 }}
             style={{ fontSize: "1.8rem" }}
           >
-            🛒
+          MERN
           </motion.span>
           <motion.span
             animate={{
