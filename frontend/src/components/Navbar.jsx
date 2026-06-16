@@ -138,7 +138,7 @@ const Navbar = () => {
                   to="/admin"
                   style={{ color: "#f0a500", fontWeight: "bold" }}
                 >
-                  ⚙️ Admin
+                 Admin
                 </Link>
               </motion.div>
             ) : (
